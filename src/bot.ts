@@ -1,6 +1,5 @@
 import 'dotenv/config'
-import { Bot, webhookCallback } from 'grammy'
-import { createServer } from 'node:http'
+import { Bot } from 'grammy'
 import { registrarStart, enviarMenuPrincipal } from './handlers/start.js'
 import { registrarNavegar } from './handlers/navegar.js'
 import { registrarLeitura } from './handlers/leitura.js'
@@ -31,22 +30,7 @@ bot.catch((err) => {
   console.error('Erro no bot:', err)
 })
 
-if (process.env.NODE_ENV === 'production') {
-  const PORT = parseInt(process.env.PORT ?? '3000')
-  const handleUpdate = webhookCallback(bot, 'http')
-
-  const server = createServer(async (req, res) => {
-    if (req.method === 'POST' && req.url === '/webhook') {
-      await handleUpdate(req, res)
-    } else {
-      res.writeHead(200).end('OK')
-    }
-  })
-
-  server.listen(PORT, () => {
-    console.log(`Bot rodando na porta ${PORT}`)
-  })
-} else {
-  bot.start({ allowed_updates: ['message', 'callback_query', 'chat_member'] })
-  console.log('Bot rodando em modo polling (dev)')
-}
+// Garante que não há webhook registrado (webhook e polling são mutuamente exclusivos)
+await bot.api.deleteWebhook()
+bot.start({ allowed_updates: ['message', 'callback_query', 'chat_member'] })
+console.log('Bot rodando em modo polling')

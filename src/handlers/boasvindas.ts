@@ -1,13 +1,65 @@
-import { Bot, InlineKeyboard } from 'grammy'
+import { Bot, InlineKeyboard, type Api } from 'grammy'
 import { BOT_USERNAME } from './start.js'
 
-const MENSAGEM_DM = `👋 Bem-vinda à *Princesa Devassa*!
+const MENSAGEM_DM = `Oi, as histórias do meu diário, que são todas verdadeiras, podem ser lidas aqui no telegram ou no site, é o mesmo conteúdo, escolha onde quer ler:`
 
-Temos um acervo de histórias eróticas esperando por você.
+// Dedup: chat_member e new_chat_members podem chegar juntos quando o bot é admin.
+// Guarda "chatId:userId" por alguns segundos pra não saudar duas vezes.
+const recemSaudados = new Map<string, number>()
+const TTL_MS = 60_000
 
-_Séries, capítulos, surpresas aleatórias e muito mais._`
+function jaSaudou(chatId: number, userId: number): boolean {
+  const chave = `${chatId}:${userId}`
+  const agora = Date.now()
+  // limpa entradas expiradas
+  for (const [k, t] of recemSaudados) {
+    if (agora - t > TTL_MS) recemSaudados.delete(k)
+  }
+  if (recemSaudados.has(chave)) return true
+  recemSaudados.set(chave, agora)
+  return false
+}
+
+async function saudar(api: Api, chatId: number, userId: number, nome: string) {
+  if (jaSaudou(chatId, userId)) return
+
+  const botoes = new InlineKeyboard()
+    .url('📖 Ler no Privado', `https://t.me/${BOT_USERNAME}?start=inicio`).row()
+    .url('🌐 Ler no Site', `https://www.princesinhadevassa.com.br`)
+
+  // 1) DM no privado (só chega para quem já iniciou o bot — Telegram bloqueia o resto)
+  try {
+    await api.sendMessage(
+      userId,
+      `Seja bem-vinda, *${nome}*! 💕\n\n${MENSAGEM_DM}`,
+      { parse_mode: 'Markdown', reply_markup: botoes }
+    )
+    console.log('[boasvindas] DM enviado', userId)
+  } catch {
+    console.log('[boasvindas] DM bloqueado (nunca iniciou o bot)', userId)
+  }
+
+  // 2) Mensagem no próprio grupo, marcando a pessoa — sempre.
+  //    O botão "Ler no Privado" é um link t.me que abre a conversa privada com o bot.
+  const mencao = `[${nome}](tg://user?id=${userId})`
+  const textoGrupo =
+    `Seja bem-vinda, ${mencao}! 💕\n\n` +
+    `Oi, as histórias do meu diário, que são todas verdadeiras, podem ser lidas aqui no telegram ou no site, é o mesmo conteúdo, escolha onde quer ler:`
+
+  try {
+    await api.sendMessage(chatId, textoGrupo, {
+      parse_mode: 'Markdown',
+      reply_markup: botoes,
+    })
+    console.log('[boasvindas] mensagem no grupo enviada', userId)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'desconhecido'
+    console.error('[boasvindas] falhou ao postar no grupo:', msg)
+  }
+}
 
 export function registrarBoasVindas(bot: Bot) {
+  // Evento chat_member: só chega se o bot for ADMIN do grupo.
   bot.on('chat_member', async (ctx) => {
     const membro = ctx.chatMember
     console.log('[chat_member]', JSON.stringify({
@@ -16,7 +68,6 @@ export function registrarBoasVindas(bot: Bot) {
       user: membro.new_chat_member.user.id,
     }))
 
-    // Só dispara quando alguém entra (member ou administrator)
     const statusEntrou = ['member', 'administrator', 'creator']
     const statusForaAntes = ['left', 'kicked']
     const entrou =
@@ -24,42 +75,24 @@ export function registrarBoasVindas(bot: Bot) {
       statusForaAntes.includes(membro.old_chat_member.status)
 
     if (!entrou) return
+    if (membro.new_chat_member.user.is_bot) return
 
-    const nome = membro.new_chat_member.user.first_name
-    const userId = membro.new_chat_member.user.id
+    await saudar(
+      ctx.api,
+      ctx.chat.id,
+      membro.new_chat_member.user.id,
+      membro.new_chat_member.user.first_name
+    )
+  })
 
-    const botoes = new InlineKeyboard()
-      .url('📖 Ler no Privado', `https://t.me/${BOT_USERNAME}?start=inicio`).row()
-      .url('🌐 Ler no Site', `https://www.princesinhadevassa.com.br`)
-
-    // 1) DM no privado (só chega para quem já iniciou o bot — Telegram bloqueia o resto)
-    try {
-      await ctx.api.sendMessage(
-        userId,
-        `${MENSAGEM_DM}\n\nSeja bem-vinda, *${nome}*! 💕`,
-        { parse_mode: 'Markdown', reply_markup: botoes }
-      )
-      console.log('[boasvindas] DM enviado', userId)
-    } catch {
-      console.log('[boasvindas] DM bloqueado (nunca iniciou o bot)', userId)
-    }
-
-    // 2) Mensagem no próprio grupo, marcando a pessoa — sempre
-    const mencao = `[${nome}](tg://user?id=${userId})`
-    const textoGrupo =
-      `👋 Seja bem-vinda, ${mencao}!\n\n` +
-      `Temos um acervo de histórias eróticas esperando por você.\n` +
-      `Toque abaixo para começar a ler 👇`
-
-    try {
-      await ctx.api.sendMessage(ctx.chat.id, textoGrupo, {
-        parse_mode: 'Markdown',
-        reply_markup: botoes,
-      })
-      console.log('[boasvindas] mensagem no grupo enviada', userId)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'desconhecido'
-      console.error('[boasvindas] falhou ao postar no grupo:', msg)
+  // Mensagem de serviço new_chat_members: chega mesmo sem o bot ser admin.
+  // Garante a saudação quando chat_member não é entregue.
+  bot.on('message:new_chat_members', async (ctx) => {
+    const novos = ctx.message.new_chat_members
+    console.log('[new_chat_members]', novos.map((u) => u.id))
+    for (const user of novos) {
+      if (user.is_bot) continue
+      await saudar(ctx.api, ctx.chat.id, user.id, user.first_name)
     }
   })
 }
