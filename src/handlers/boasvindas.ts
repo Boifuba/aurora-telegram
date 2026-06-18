@@ -25,7 +25,7 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
 
   const botoes = new InlineKeyboard()
     .url('📖 Ler no Privado', `https://t.me/${BOT_USERNAME}?start=inicio`).row()
-    .url('🌐 Ler no Site', `https://www.princesinhadevassa.com.br`)
+    .url('🌐 Ler no Site', `https://www.princesadevassa.com.br`)
 
   // 1) DM no privado (só chega para quem já iniciou o bot — Telegram bloqueia o resto)
   try {
