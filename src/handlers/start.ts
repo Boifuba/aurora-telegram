@@ -27,7 +27,7 @@ export async function construirMenuPrincipal(): Promise<{ set1: Set; set2: Set }
   kb2.text('🎲 Surpreenda-me', 'surpresa')
 
   const set1: Set = {
-    texto: '✨ *Bem-vinda à Princesa Devassa!*\n\n📖 Leia o meu *diário de aventuras* 👇',
+    texto: '✨ *Bem-vinda à Princesa Devassa!*\n\n📖 Leia o meu *diário devasso* 👇',
     kb: kb1,
   }
   const set2: Set = {
