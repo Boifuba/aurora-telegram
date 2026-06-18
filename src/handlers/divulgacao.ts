@@ -4,7 +4,7 @@ import { BOT_USERNAME } from './start.js'
 
 const ADMIN_USER_ID = parseInt(process.env.ADMIN_USER_ID ?? '0', 10)
 const CANAL_ID = process.env.CANAL_ID ?? ''
-const INTERVALO_MS = 4 * 60 * 60 * 1000 // 4 horas
+const INTERVALO_MS = 8 * 60 * 60 * 1000 // 8 horas
 const HISTORICO_MAX = 10 // não repete as últimas N histórias sorteadas
 
 const ultimosPostados: string[] = []
