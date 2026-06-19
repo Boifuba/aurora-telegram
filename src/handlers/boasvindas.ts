@@ -31,7 +31,7 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
   try {
     await api.sendMessage(
       userId,
-      `Seja bem-vinda, *${nome}*! 💕\n\n${MENSAGEM_DM}`,
+      `Seja bem-vindo(a), *${nome}*! 💕\n\n${MENSAGEM_DM}`,
       { parse_mode: 'Markdown', reply_markup: botoes }
     )
     console.log('[boasvindas] DM enviado', userId)
@@ -43,7 +43,7 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
   //    O botão "Ler no Privado" é um link t.me que abre a conversa privada com o bot.
   const mencao = `[${nome}](tg://user?id=${userId})`
   const textoGrupo =
-    `Seja bem-vinda, ${mencao}! 💕\n\n` +
+    `Seja bem-vindo(a), ${mencao}! 💕\n\n` +
     `Oi, as histórias do meu diário, que são todas verdadeiras, podem ser lidas aqui no telegram ou no site, é o mesmo conteúdo, escolha onde quer ler:`
 
   try {
