@@ -16,7 +16,7 @@ async function abrirNo(ctx: any, nodeId: string) {
 
   // Folha → vai direto para a leitura.
   if (!(await isContainer(nodeId))) {
-    const leitura = await montarLeitura(nodeId, 0)
+    const leitura = await montarLeitura(nodeId, 0, ctx.from?.id, 'bot')
     await ctx.answerCallbackQuery()
     if (!leitura.ok) {
       await ctx.editMessageText(leitura.motivo, {

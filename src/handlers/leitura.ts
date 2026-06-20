@@ -1,12 +1,18 @@
 import { Bot, InlineKeyboard } from 'grammy'
 import { paginarTexto } from '../lib/paginator.js'
 import { getNo, getConteudo, getProximaFolhaIrma } from '../lib/nodes.js'
+import { registrarAbertura, type OrigemLeitura } from '../lib/leituras.js'
 
 type Leitura =
   | { ok: true; texto: string; kb: InlineKeyboard }
   | { ok: false; motivo: string }
 
-export async function montarLeitura(nodeId: string, pagina: number): Promise<Leitura> {
+export async function montarLeitura(
+  nodeId: string,
+  pagina: number,
+  userId?: number,
+  origem: OrigemLeitura = 'bot',
+): Promise<Leitura> {
   const no = await getNo(nodeId)
   if (!no) {
     return { ok: false, motivo: 'Conteúdo não encontrado.' }
@@ -15,6 +21,11 @@ export async function montarLeitura(nodeId: string, pagina: number): Promise<Lei
   const corpo = await getConteudo(nodeId)
   if (!corpo) {
     return { ok: false, motivo: 'Conteúdo não disponível.' }
+  }
+
+  // Registra só a abertura do conto (página 0), não cada virada de página.
+  if (pagina === 0) {
+    registrarAbertura(userId, nodeId, origem)
   }
 
   const paginas = paginarTexto(corpo)
@@ -58,7 +69,7 @@ export function registrarLeitura(bot: Bot) {
     const nodeId = ctx.match[1]
     const pagina = parseInt(ctx.match[2])
 
-    const leitura = await montarLeitura(nodeId, pagina)
+    const leitura = await montarLeitura(nodeId, pagina, ctx.from?.id, 'bot')
 
     if (!leitura.ok) {
       await ctx.answerCallbackQuery(leitura.motivo)

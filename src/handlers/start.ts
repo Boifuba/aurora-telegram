@@ -52,7 +52,7 @@ export function registrarStart(bot: Bot) {
     // Deep link vindo do canal: /start ler_<id> abre a história direto
     const deepLinkLer = payload.match(/^ler_(.+)$/)
     if (deepLinkLer && ctx.chat.type === 'private') {
-      const leitura = await montarLeitura(deepLinkLer[1], 0)
+      const leitura = await montarLeitura(deepLinkLer[1], 0, ctx.from?.id, 'canal')
 
       if (leitura.ok) {
         try {
