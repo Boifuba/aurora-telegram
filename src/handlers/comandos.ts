@@ -29,7 +29,7 @@ export function registrarComandos(bot: Bot) {
       '',
       '*Publicar no canal*',
       '🗣 */falar <texto>* — publica a mensagem no canal em nome do bot (Markdown suportado).',
-      '🎲 */sugerir* — publica agora uma sugestão de conto aleatório no canal.',
+      '🎲 */sugerir* — publica um conto aleatório no canal. Com texto (*/sugerir <título>*) busca um conto específico pra escolher e publicar.',
       '',
       '*Mensagem no privado de todos*',
       '📣 */avisar* — responda a uma mensagem com este comando para enviá-la no privado de todos os usuários (com confirmação antes de disparar). _Só o admin._',
