@@ -4,9 +4,22 @@ import { BOT_USERNAME } from './start.js'
 
 const ADMIN_USER_ID = parseInt(process.env.ADMIN_USER_ID ?? '0', 10)
 const CANAL_ID = process.env.CANAL_ID ?? ''
-const INTERVALO_MS = 8 * 60 * 60 * 1000 // 8 horas
+const HORA_AGENDADA = 20 // 20h, horário de São Paulo
+const UM_DIA_MS = 24 * 60 * 60 * 1000
 const HISTORICO_MAX = 10 // não repete as últimas N histórias sorteadas
 const MAX_RESULTADOS = 8 // botões mostrados na busca
+
+// Calcula quanto falta (em ms) até a próxima ocorrência de HORA_AGENDADA:00
+// no horário de São Paulo, considerando o horário atual também em São Paulo.
+function msAteProximoHorario(): number {
+  const agoraSP = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+  )
+  const alvo = new Date(agoraSP)
+  alvo.setHours(HORA_AGENDADA, 0, 0, 0)
+  if (alvo <= agoraSP) alvo.setDate(alvo.getDate() + 1)
+  return alvo.getTime() - agoraSP.getTime()
+}
 
 // Liberado para o dono (ADMIN_USER_ID) e a @rafaella16s2.
 const USERNAMES_LIBERADOS = ['rafaella16s2']
@@ -170,13 +183,19 @@ export function registrarDivulgacao(bot: Bot) {
     await ctx.editMessageText('❌ Cancelado.')
   })
 
-  // Agendador: uma sugestão a cada 8 horas
+  // Agendador: uma sugestão por dia, às 20h no horário de São Paulo.
   if (!CANAL_ID) {
     console.warn('CANAL_ID não definido — divulgação automática desativada.')
     return
   }
 
-  setInterval(() => {
-    postarSugestao(bot).catch((err) => console.error('Erro na divulgação automática:', err))
-  }, INTERVALO_MS)
+  const agendar = () => {
+    setTimeout(() => {
+      postarSugestao(bot).catch((err) => console.error('Erro na divulgação automática:', err))
+      setInterval(() => {
+        postarSugestao(bot).catch((err) => console.error('Erro na divulgação automática:', err))
+      }, UM_DIA_MS)
+    }, msAteProximoHorario())
+  }
+  agendar()
 }

@@ -25,7 +25,8 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
 
   const botoes = new InlineKeyboard()
     .url('📖 Ler no Privado', `https://t.me/${BOT_USERNAME}?start=inicio`).row()
-    .url('🌐 Ler no Site', `https://www.princesadevassa.com.br`)
+    .url('🌐 Ler no Site', `https://www.princesadevassa.com.br`).row()
+    .url('💬 Entrar no grupo', `https://t.me/PrincesinhaDevassa`)
 
   // 1) DM no privado (só chega para quem já iniciou o bot — Telegram bloqueia o resto)
   try {
@@ -40,7 +41,7 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
   }
 
   // 2) Mensagem no próprio grupo, marcando a pessoa — sempre.
-  //    O botão "Ler no Privado" é um link t.me que abre a conversa privada com o bot.
+  //    Sem botões: quem está no canal já tem a opção de ler por lá.
   const mencao = `[${nome}](tg://user?id=${userId})`
   const textoGrupo =
     `Seja bem-vindo(a), ${mencao}! 💕\n\n` +
@@ -49,7 +50,6 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
   try {
     await api.sendMessage(chatId, textoGrupo, {
       parse_mode: 'Markdown',
-      reply_markup: botoes,
     })
     console.log('[boasvindas] mensagem no grupo enviada', userId)
   } catch (err) {
@@ -61,6 +61,8 @@ async function saudar(api: Api, chatId: number, userId: number, nome: string) {
 export function registrarBoasVindas(bot: Bot) {
   // Evento chat_member: só chega se o bot for ADMIN do grupo.
   bot.on('chat_member', async (ctx) => {
+    if (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup') return
+
     const membro = ctx.chatMember
     console.log('[chat_member]', JSON.stringify({
       old: membro.old_chat_member.status,
@@ -88,6 +90,8 @@ export function registrarBoasVindas(bot: Bot) {
   // Mensagem de serviço new_chat_members: chega mesmo sem o bot ser admin.
   // Garante a saudação quando chat_member não é entregue.
   bot.on('message:new_chat_members', async (ctx) => {
+    if (ctx.chat.type !== 'group' && ctx.chat.type !== 'supergroup') return
+
     const novos = ctx.message.new_chat_members
     console.log('[new_chat_members]', novos.map((u) => u.id))
     for (const user of novos) {

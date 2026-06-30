@@ -4,45 +4,27 @@ import { getRaizes } from '../lib/nodes.js'
 
 export const BOT_USERNAME = 'princesadevassabot'
 
-function ehDiario(titulo: string): boolean {
-  return titulo.trim().toLowerCase().includes('diário de aventuras')
-    || titulo.trim().toLowerCase().includes('diario de aventuras')
-}
+type Menu = { texto: string; kb: InlineKeyboard }
 
-type Set = { texto: string; kb: InlineKeyboard }
-
-// Menu principal em DOIS sets (duas mensagens separadas):
-// Set 1 = "Leia o meu diário" (Diário de Aventuras);
-// Set 2 = as demais raízes + surpresa.
-export async function construirMenuPrincipal(): Promise<{ set1: Set; set2: Set }> {
+// Menu principal numa única mensagem: todas as raízes na ordem em que
+// `getRaizes` as retorna + o botão "Surpreenda-me" no fim.
+export async function construirMenuPrincipal(): Promise<Menu> {
   const raizes = await getRaizes()
-  const diario = raizes.find((r) => ehDiario(r.title))
-  const outras = raizes.filter((r) => r !== diario)
 
-  const kb1 = new InlineKeyboard()
-  if (diario) kb1.text('📖 Leia o meu diário', `nav:${diario.id}`)
+  const kb = new InlineKeyboard()
+  for (const r of raizes) kb.text(r.title.trim(), `nav:${r.id}`).row()
+  kb.text('🎲 Surpreenda-me', 'surpresa')
 
-  const kb2 = new InlineKeyboard()
-  for (const r of outras) kb2.text(r.title.trim(), `nav:${r.id}`).row()
-  kb2.text('🎲 Surpreenda-me', 'surpresa')
-
-  const set1: Set = {
-    texto: '✨ *Bem-vinda à Princesa Devassa!*\n\n📖 Leia o meu *diário devasso* 👇',
-    kb: kb1,
+  return {
+    texto: '✨ *Bem-vinda à Princesa Devassa!*\n\nEscolha abaixo o que quer ler 👇',
+    kb,
   }
-  const set2: Set = {
-    texto: 'Ou, se quiser ler outras coisas, pensamentos etc., escolha abaixo 👇',
-    kb: kb2,
-  }
-
-  return { set1, set2 }
 }
 
-// Envia o menu como duas mensagens (os dois sets) no chat atual.
+// Envia o menu como uma única mensagem no chat atual.
 export async function enviarMenuPrincipal(ctx: any) {
-  const { set1, set2 } = await construirMenuPrincipal()
-  await ctx.reply(set1.texto, { parse_mode: 'Markdown', reply_markup: set1.kb })
-  await ctx.reply(set2.texto, { parse_mode: 'Markdown', reply_markup: set2.kb })
+  const { texto, kb } = await construirMenuPrincipal()
+  await ctx.reply(texto, { parse_mode: 'Markdown', reply_markup: kb })
 }
 
 export function registrarStart(bot: Bot) {
@@ -75,9 +57,8 @@ export function registrarStart(bot: Bot) {
 
     // No grupo tenta mandar DM
     try {
-      const { set1, set2 } = await construirMenuPrincipal()
-      await ctx.api.sendMessage(ctx.from!.id, set1.texto, { parse_mode: 'Markdown', reply_markup: set1.kb })
-      await ctx.api.sendMessage(ctx.from!.id, set2.texto, { parse_mode: 'Markdown', reply_markup: set2.kb })
+      const { texto, kb } = await construirMenuPrincipal()
+      await ctx.api.sendMessage(ctx.from!.id, texto, { parse_mode: 'Markdown', reply_markup: kb })
       // Apaga o comando do grupo se tiver permissão
       await ctx.deleteMessage().catch(() => {})
     } catch {
